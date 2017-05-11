@@ -217,7 +217,7 @@ int Disassemble8080Op(unsigned char *codebuffer, int pc)
 		case 0xc7: printf("RST	0"); break;
 		case 0xc8: printf("RZ"); break;
 		case 0xc9: printf("RET"); break;
-		case 0xca: printf("JS 	$%02x%02x", code[2], code[1]); opbytes=3; break;
+		case 0xca: printf("JZ 	$%02x%02x", code[2], code[1]); opbytes=3; break;
 		case 0xcb: printf("NOP");
 		case 0xcc: printf("CZ 	$%02x%02x", code[2], code[1]); opbytes=3; break;
 		case 0xcd: printf("CALL	$%02x%02x", code[2], code[1]); opbytes=3; break;

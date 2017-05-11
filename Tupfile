@@ -1,0 +1,3 @@
+CFLAGS += -Wall
+
+: emulator.c |> gcc $(CFLAGS) %f -o %o |> %B
