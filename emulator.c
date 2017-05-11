@@ -32,10 +32,15 @@ void UnimplementedInstruction(State8080* state)
 	exit(1);
 }
 
-uint8_t Parity(uint8_t num)
+uint8_t Parity(uint8_t x)
 {
-	// TODO: Implement Parity functionality...
-	return 0;
+	uint8_t p = 0;
+	while (x > 0)
+	{
+		p = (p + (x & 1)) % 2;
+		x >>= 1;
+	}
+	return p;
 }
 
 int Emulate8080Op(State8080* state)
@@ -493,8 +498,22 @@ int Emulate8080Op(State8080* state)
 				   state->pc++;
 				   break;
 				}
-		case 0xc7: UnimplementedInstruction(state); break;
-		case 0xc8: UnimplementedInstruction(state); break;
+		case 0xc7: // RST 0 (CALL 0x0)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x0;
+				   break;
+				}
+		case 0xc8: // RZ
+				   if (state->cc.z != 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->sp += 2;
+				   }
+				   break;
 		case 0xc9: // RET
 				   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
 				   state->sp += 2;
@@ -505,7 +524,7 @@ int Emulate8080Op(State8080* state)
 				   else
 					   state->pc += 2;
 				   break;
-		case 0xcb: UnimplementedInstruction(state); break;
+		case 0xcb: break;
 		case 0xcc: // CZ
 				{
 				   if (state->cc.z != 0)
@@ -542,8 +561,22 @@ int Emulate8080Op(State8080* state)
 				   state->pc++;
 				   break;
 				}
-		case 0xcf: UnimplementedInstruction(state); break;
-		case 0xd0: UnimplementedInstruction(state); break;
+		case 0xcf: // RST 1 (CALL 0x8)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x8;
+				   break;
+				}
+		case 0xd0: // RNC
+				   if (state->cc.cy == 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->sp += 2;
+				   }
+				   break;
 		case 0xd1: // POP D
 				   state->e = (state->memory[state->sp] & 0xff);
 				   state->d = (state->memory[state->sp + 1] & 0xff);
@@ -555,7 +588,7 @@ int Emulate8080Op(State8080* state)
 				   else
 					   state->pc += 2;
 				   break;
-		case 0xd3: UnimplementedInstruction(state); break;
+		case 0xd3: UnimplementedInstruction(state); break;	// special
 		case 0xd4: // CNC
 				{
 				   if (state->cc.cy == 0)
@@ -577,38 +610,225 @@ int Emulate8080Op(State8080* state)
 				   state->memory[state->sp - 2] = (state->e & 0xff);
 				   state->sp -= 2;
 				   break;
-		case 0xd6: UnimplementedInstruction(state); break;
-		case 0xd7: UnimplementedInstruction(state); break;
-		case 0xd8: UnimplementedInstruction(state); break;
-		case 0xd9: UnimplementedInstruction(state); break;
+		case 0xd6: // SUI D8
+				{
+				   uint16_t answer = (uint16_t) state->a - (uint16_t) opcode[1];
+				   state->cc.z = ((answer & 0xff) == 0);
+				   state->cc.s = ((answer & 0x80) != 0);
+				   state->cc.cy = (state->a < opcode[1]);
+				   state->cc.p = Parity(answer & 0xff);
+				   state->a = answer & 0xff;
+				   state->pc++;
+				   break;
+				}
+		case 0xd7: // RST 2 (CALL 0x10)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x10;
+				   break;
+				}
+		case 0xd8: // RC (Return if carry flag)
+				   if (state->cc.cy != 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->pc += 2;
+				   }
+				   break;
+		case 0xd9: break;
 		case 0xda: // JC
 				   if (state->cc.cy != 0)
 					   state->pc = (opcode[2] << 8) | opcode[1];
 				   else
 					   state->pc += 2;
 				   break;
-		case 0xdb: UnimplementedInstruction(state); break;
-		case 0xdc: UnimplementedInstruction(state); break;
-		case 0xdd: UnimplementedInstruction(state); break;
-		case 0xde: UnimplementedInstruction(state); break;
-		case 0xdf: UnimplementedInstruction(state); break;
-		case 0xe0: UnimplementedInstruction(state); break;
-		case 0xe1: UnimplementedInstruction(state); break;
-		case 0xe2: UnimplementedInstruction(state); break;
-		case 0xe3: UnimplementedInstruction(state); break;
-		case 0xe4: UnimplementedInstruction(state); break;
-		case 0xe5: UnimplementedInstruction(state); break;
-		case 0xe6: UnimplementedInstruction(state); break;
-		case 0xe7: UnimplementedInstruction(state); break;
-		case 0xe8: UnimplementedInstruction(state); break;
-		case 0xe9: UnimplementedInstruction(state); break;
-		case 0xea: UnimplementedInstruction(state); break;
-		case 0xeb: UnimplementedInstruction(state); break;
-		case 0xec: UnimplementedInstruction(state); break;
-		case 0xed: UnimplementedInstruction(state); break;
-		case 0xee: UnimplementedInstruction(state); break;
-		case 0xef: UnimplementedInstruction(state); break;
-		case 0xf0: UnimplementedInstruction(state); break;
+		case 0xdb: UnimplementedInstruction(state); break; // special
+		case 0xdc: // CC (CALL adr if CY)
+				{
+				   if (state->cc.cy != 0)
+				   {
+						uint16_t ret = state->pc + 2;
+						state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+						state->memory[state->sp - 2] = (ret & 0xff);
+						state->sp -= 2;
+						state->pc = (opcode[2] << 8) | opcode[1];
+				   }
+				   else
+				   {
+					   state->pc += 2;
+				   }
+				   break;
+				}
+		case 0xdd: break;
+		case 0xde: // SBI D8
+				{
+				   uint16_t answer = (uint16_t) state->a - (uint16_t) opcode[1] - (uint16_t) state->cc.cy;
+				   state->cc.z = ((answer & 0xff) == 0);
+				   state->cc.s = ((answer & 0x80) != 0);
+				   state->cc.cy = (state->a < (opcode[1] + state->cc.cy));
+				   state->cc.p = Parity(answer & 0xff);
+				   state->a = answer & 0xff;
+				   state->pc++;
+				   break;
+				}
+		case 0xdf: // RST 3 (CALL 0x18)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x18;
+				   break;
+				}
+		case 0xe0: // RPO (Return is Parity flag is not set, Odd)
+				   if (state->cc.p == 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->sp += 2;
+				   }
+				   break;
+		case 0xe1: // POP H
+				   state->l = (state->memory[state->sp] & 0xff);
+				   state->h = (state->memory[state->sp + 1] & 0xff);
+				   state->sp += 2;
+				   break;
+		case 0xe2: // JPO (Jump is Parity flag not set, Odd)
+				   if (state->cc.p == 0)
+				   {
+					   state->pc = (opcode[2] << 8) | opcode[1];
+				   }
+				   else
+				   {
+					   state->pc += 2;
+				   }
+				   break;
+		case 0xe3: // XTHL (swap L and (SP) and swap H and (sp+1))
+				{
+				   uint8_t h = state->h;
+				   uint8_t l = state->l;
+				   state->h = (state->memory[state->sp + 1] & 0xff);
+				   state->l = (state->memory[state->sp] & 0xff);
+				   state->memory[state->sp + 1] = h;
+				   state->memory[state->sp] = l;
+				   break;
+				}
+		case 0xe4: // CPO (Call adr if Parity flag is not set, Odd)
+				{
+				   if (state->cc.p == 0)
+				   {
+					   uint16_t ret = state->pc + 2;
+					   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+					   state->memory[state->sp - 2] = (ret & 0xff);
+					   state->sp -= 2;
+					   state->pc = (opcode[2] << 8) | opcode[1];
+				   }
+				   else
+				   {
+					   state->pc += 2;
+				   }
+				   break;
+				}
+		case 0xe5: // PUSH H
+				   state->memory[state->sp - 1] = (state->h & 0xff);
+				   state->memory[state->sp - 2] = (state->l & 0xff);
+				   state->sp -= 2;
+				   break;
+		case 0xe6: // ANI
+				{
+				   uint8_t answer = state->a & opcode[1];
+				   state->cc.z = ((answer & 0xff) == 0);
+				   state->cc.s = ((answer & 0x80) != 0);
+				   state->cc.cy = 0;
+				   state->cc.p = Parity(answer & 0xff);
+				   state->a = answer & 0xff;
+				   state->pc++;
+				   break;
+				}
+		case 0xe7: // RST 4 (CALL 0x20)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x20;
+				   break;
+				}
+		case 0xe8: // RPE (Return is Parity even)
+				   if (state->cc.p != 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->sp += 2;
+				   }
+				   break;
+		case 0xe9: // PCHL (Jump to address in H:L)
+				   state->pc = (state->h << 8) | state->l;
+				   break;
+		case 0xea: // JPE (Jump if Parity Even)
+				   if (state->cc.p != 0)
+				   {
+					   state->pc = (opcode[2] << 8) | opcode[1];
+				   }
+				   else
+				   {
+					   state->pc += 2;
+				   }
+				   break;
+		case 0xeb: // XCHG (swap H and D and swap L and E)
+				{
+				   uint8_t h = state->h;
+				   uint8_t l = state->l;
+				   state->h = state->d;
+				   state->l = state->e;
+				   state->d = h;
+				   state->e = l;
+				   break;
+				}
+		case 0xec: // CPE (Call adr if Parity is Even)
+				{
+				   if (state->cc.p != 0)
+				   {
+					   uint16_t ret = state->pc + 2;
+					   state->memory[state->pc - 1] = (ret >> 8) & 0xff;
+					   state->memory[state->pc - 2] = (ret & 0xff);
+					   state->sp -= 2;
+					   state->pc = (opcode[2] << 8) | opcode[1];
+				   }
+				   else
+				   {
+					   state->pc += 2;
+				   }
+				   break;
+				}
+		case 0xed: break;
+		case 0xee: // XRI
+				{
+				   uint8_t answer = state->a ^ opcode[1];
+				   state->cc.z = ((answer & 0xff) == 0);
+				   state->cc.s = ((answer & 0x80) != 0);
+				   state->cc.cy = 0;
+				   state->cc.p = Parity(answer & 0xff);
+				   state->a = answer & 0xff;
+				   state->pc++;
+				   break;
+				}
+		case 0xef: // RST 5 (CALL 0x28)
+				{
+				   uint16_t ret = state->pc;
+				   state->memory[state->sp - 1] = (ret >> 8) & 0xff;
+				   state->memory[state->sp - 2] = (ret & 0xff);
+				   state->sp -= 2;
+				   state->pc = 0x28;
+				   break;
+				}
+		case 0xf0: // RP (Return if positive)
+				   if (state->cc.s == 0)
+				   {
+					   state->pc = state->memory[state->sp] | (state->memory[state->sp + 1] << 8);
+					   state->sp += 2;
+				   }
+				   break;
 		case 0xf1: UnimplementedInstruction(state); break;
 		case 0xf2: UnimplementedInstruction(state); break;
 		case 0xf3: UnimplementedInstruction(state); break;
